@@ -5,5 +5,5 @@ type Merchant struct {
 	AccountID int64
 	Token     string
 	Name      string
-	Identify  *string
+	Identify  string
 }
