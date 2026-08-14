@@ -43,8 +43,18 @@ type Merchant struct {
 	Token    string `json:"token"`
 }
 
+type InvoiceDocumentsResponse struct {
+	Data []InvoiceResponse `json:"data"`
+}
+
+type InvoiceResponse struct {
+	Link          string `json:"link"`
+	CreatedString string `json:"createdString"`
+}
+
 var ErrStatusIsntOk = errors.New("status is not ok")
 var ErrNoBearerToken = errors.New("no bearer token on response data")
+var ErrInvoiceNotFound = errors.New("no invoice found for period")
 
 func NewClient(ctx context.Context, cookie string) (*Client, error) {
 	c := &Client{
@@ -81,7 +91,7 @@ func NewClient(ctx context.Context, cookie string) (*Client, error) {
 	}
 
 	c.bearerToken = data.Profile.User.SessionApiKey
-	log.Printf("Actually logged: %+v", data.Profile.User)
+	log.Printf("Actually logged: %+v", data.Profile.User.DisplayName)
 	return c, nil
 }
 
@@ -114,6 +124,58 @@ func (c *Client) FetchMerchants(ctx context.Context) ([]domain.Merchant, error) 
 	}
 
 	return merchants, nil
+}
+
+func (c *Client) ListInvoiceDocuments(ctx context.Context, accountToken string, p domain.Period) (domain.Invoice, error) {
+	req, err := c.newAuthenticatedRequest(
+		ctx,
+		http.MethodGet,
+		ListInvoiceUrl().String(),
+		"https://dashboard.stripe.com/settings/documents",
+		accountToken,
+	)
+
+	if err != nil {
+		return domain.Invoice{}, err
+	}
+
+	body, err := c.executeRequestAndGetBody(req)
+	if err != nil {
+		return domain.Invoice{}, err
+	}
+
+	var data InvoiceDocumentsResponse
+	if err := json.Unmarshal(body, &data); err != nil {
+		return domain.Invoice{}, err
+	}
+
+	invoice, err := getInvoiceFromListDocumentsResponse(data, p)
+	if err != nil {
+		return domain.Invoice{}, err
+	}
+
+	return invoice, nil
+}
+
+func (c *Client) DownloadPDF(ctx context.Context, accountToken string, url string) ([]byte, error) {
+	req, err := c.newAuthenticatedRequest(
+		ctx,
+		http.MethodGet,
+		DownloadPDFUrl(url).String(),
+		"https://dashboard.stripe.com/settings/documents",
+		accountToken,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := c.executeRequestAndGetBody(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }
 
 func (c *Client) newAuthenticatedRequest(
@@ -183,4 +245,28 @@ func transformMerchantRequestToMerchantDomain(response MerchantsResponse) ([]dom
 	}
 
 	return merchants, nil
+}
+
+func getInvoiceFromListDocumentsResponse(data InvoiceDocumentsResponse, period domain.Period) (domain.Invoice, error) {
+	for _, invoiceResponse := range data.Data {
+		if invoiceResponse.CreatedString == "" {
+			continue
+		}
+
+		castToPeriod, err := domain.ParsePeriodFromStripeDate(invoiceResponse.CreatedString)
+		if err != nil {
+			return domain.Invoice{}, err
+		}
+
+		if castToPeriod == period {
+			log.Println("Invoice Found")
+			return domain.Invoice{
+				Link:   invoiceResponse.Link,
+				Period: period,
+			}, nil
+		}
+	}
+
+	log.Println("Invoice not found in list")
+	return domain.Invoice{}, ErrInvoiceNotFound
 }

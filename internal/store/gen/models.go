@@ -11,9 +11,9 @@ type Account struct {
 }
 
 type Merchant struct {
-	ID        int32   `json:"id"`
-	AccountID int32   `json:"account_id"`
-	Token     string  `json:"token"`
-	Name      string  `json:"name"`
-	Identify  *string `json:"identify"`
+	ID        int32  `json:"id"`
+	AccountID int32  `json:"account_id"`
+	Token     string `json:"token"`
+	Name      string `json:"name"`
+	Identify  string `json:"identify"`
 }

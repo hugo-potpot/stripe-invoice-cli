@@ -26,7 +26,7 @@ func ParsePeriod(s string) (Period, error) {
 }
 
 func ParsePeriodFromStripeDate(stripeDate string) (Period, error) {
-	parsedTime, err := time.Parse("2006-01-02", stripeDate)
+	parsedTime, err := time.Parse(time.DateOnly, stripeDate)
 
 	if err != nil {
 		return Period{}, fmt.Errorf("parsing %q: %w", stripeDate, ErrFailedToParsePeriod)

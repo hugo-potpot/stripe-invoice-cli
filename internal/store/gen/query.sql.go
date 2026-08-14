@@ -19,10 +19,10 @@ RETURNING id, account_id, token, name, identify
 `
 
 type CreateMerchantParams struct {
-	AccountID int32   `json:"account_id"`
-	Token     string  `json:"token"`
-	Name      string  `json:"name"`
-	Identify  *string `json:"identify"`
+	AccountID int32  `json:"account_id"`
+	Token     string `json:"token"`
+	Name      string `json:"name"`
+	Identify  string `json:"identify"`
 }
 
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error) {

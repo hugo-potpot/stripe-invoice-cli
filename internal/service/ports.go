@@ -13,9 +13,9 @@ type Store interface {
 }
 
 type StripeClient interface {
-	FetchMerchants(ctx context.Context, cookie string) ([]domain.Merchant, error)
-	ListInvoiceDocuments(ctx context.Context, cookie, accountToken string, p domain.Period) ([]domain.Invoice, error)
-	DownloadPDF(ctx context.Context, cookie, accountToken, url string) ([]byte, error)
+	FetchMerchants(ctx context.Context) ([]domain.Merchant, error)
+	ListInvoiceDocuments(ctx context.Context, accountToken string, p domain.Period) (domain.Invoice, error)
+	DownloadPDF(ctx context.Context, accountToken, url string) ([]byte, error)
 }
 
 type Mailer interface {
