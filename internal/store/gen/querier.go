@@ -10,7 +10,8 @@ import (
 
 type Querier interface {
 	CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error)
-	GetAccount(ctx context.Context, id int32) (Account, error)
+	GetAccount(ctx context.Context, id int64) (Account, error)
+	ListMerchantsByAccount(ctx context.Context, accountID int64) ([]Merchant, error)
 }
 
 var _ Querier = (*Queries)(nil)

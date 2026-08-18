@@ -6,7 +6,6 @@ import (
 )
 
 type Store interface {
-	UpsertAccountCookie(ctx context.Context, accountID int64, cookie string) (domain.Account, error)
 	GetAccount(ctx context.Context, accountID int64) (domain.Account, error)
 	InsertMerchantIfNotExist(ctx context.Context, m domain.Merchant) (created bool, err error)
 	ListMerchants(ctx context.Context, accountID int64) ([]domain.Merchant, error)

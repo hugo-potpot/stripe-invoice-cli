@@ -5,14 +5,13 @@
 package gen
 
 type Account struct {
-	ID     int32  `json:"id"`
-	Name   string `json:"name"`
-	Cookie string `json:"cookie"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Merchant struct {
-	ID        int32  `json:"id"`
-	AccountID int32  `json:"account_id"`
+	ID        int64  `json:"id"`
+	AccountID int64  `json:"account_id"`
 	Token     string `json:"token"`
 	Name      string `json:"name"`
 	Identify  string `json:"identify"`

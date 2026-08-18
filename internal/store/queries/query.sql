@@ -9,3 +9,7 @@ INSERT INTO merchants (
     @account_id, @token, @name, @identify
 )
 RETURNING *;
+
+-- name: ListMerchantsByAccount :many
+SELECT * FROM merchants
+WHERE account_id = $1;

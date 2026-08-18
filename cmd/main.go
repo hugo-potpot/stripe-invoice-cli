@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"stripe-invoice-go/internal/cli"
 	"stripe-invoice-go/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,6 +38,12 @@ func main() {
 
 	queries := store.New(pool)
 
+	// Init cobra CLI
+	rootCmd := cli.NewRootCmd(queries)
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
+		slog.Error("command failed", "error", err)
+		os.Exit(1)
+	}
 }
 
 func run(ctx context.Context, c chan<- *pgxpool.Pool) {

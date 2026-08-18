@@ -222,6 +222,7 @@ func (c *Client) executeRequestAndGetBody(req *http.Request) ([]byte, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		log.Println(string(body))
 		return nil, ErrStatusIsntOk
 	}
 

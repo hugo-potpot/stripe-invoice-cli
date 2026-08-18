@@ -2,8 +2,10 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"stripe-invoice-go/internal/domain"
@@ -20,7 +22,7 @@ func New(pool *pgxpool.Pool) *Store {
 }
 
 func (s *Store) GetAccount(ctx context.Context, id int64) (domain.Account, error) {
-	row, err := s.q.GetAccount(ctx, int32(id))
+	row, err := s.q.GetAccount(ctx, id)
 	if err != nil {
 		return domain.Account{}, fmt.Errorf("get account %d: %w", id, err)
 	}
@@ -29,7 +31,7 @@ func (s *Store) GetAccount(ctx context.Context, id int64) (domain.Account, error
 
 func (s *Store) CreateMerchant(ctx context.Context, m domain.Merchant) (domain.Merchant, error) {
 	row, err := s.q.CreateMerchant(ctx, gen.CreateMerchantParams{
-		AccountID: int32(m.AccountID),
+		AccountID: m.AccountID,
 		Token:     m.Token,
 		Name:      m.Name,
 		Identify:  m.Identify,
@@ -40,13 +42,47 @@ func (s *Store) CreateMerchant(ctx context.Context, m domain.Merchant) (domain.M
 	return toDomainMerchant(row), nil
 }
 
+func (s *Store) ListMerchants(ctx context.Context, accountID int64) ([]domain.Merchant, error) {
+	rows, err := s.q.ListMerchantsByAccount(ctx, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("list merchants by accountId: %w", err)
+	}
+
+	var results []domain.Merchant
+	for _, row := range rows {
+		results = append(results, toDomainMerchant(row))
+	}
+
+	return results, nil
+}
+
+func (s *Store) InsertMerchantIfNotExist(ctx context.Context, m domain.Merchant) (created bool, err error) {
+	_, err = s.q.CreateMerchant(ctx, gen.CreateMerchantParams{
+		AccountID: m.AccountID,
+		Token:     m.Token,
+		Name:      m.Name,
+		Identify:  m.Identify,
+	})
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == UniqueViolation {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
 func toDomainAccount(a gen.Account) domain.Account {
-	return domain.Account{ID: int64(a.ID), Name: a.Name, Cookie: a.Cookie}
+	return domain.Account{ID: a.ID, Name: a.Name}
 }
 
 func toDomainMerchant(m gen.Merchant) domain.Merchant {
 	return domain.Merchant{
-		ID: int64(m.ID), AccountID: int64(m.AccountID),
+		ID: m.ID, AccountID: m.AccountID,
 		Token: m.Token, Name: m.Name, Identify: m.Identify,
 	}
 }
