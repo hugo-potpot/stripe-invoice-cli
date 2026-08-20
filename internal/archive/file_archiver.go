@@ -83,13 +83,6 @@ func (a *FileArchiver) ZipAccount(ctx context.Context, period domain.Period, acc
 }
 
 func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.Period, accountID int64, merchants []domain.Merchant) (string, error) {
-	// dir := a.exportDir(period, accountID) — réutilise le même dossier, MkdirAll comme dans WriteInvoice
-	// path := filepath.Join(dir, "new_merchants.csv")
-	// csv.NewWriter(file) (package encoding/csv)
-	// writer.Write([]string{"token", "name", "identify"}) — l'en-tête
-	// puis un writer.Write(...) par marchand
-	// writer.Flush() — ATTENTION, csv.Writer bufferise en interne
-	// writer.Error() — vérifie l'erreur APRÈS Flush(), pas avant (piège classique : Write() seul ne remonte pas toujours les erreurs d'écriture sous-jacentes tant que le buffer n'a pas été vidé)
 	dir := a.exportDir(period, accountID)
 	path := filepath.Join(dir, "new_merchants.csv")
 
