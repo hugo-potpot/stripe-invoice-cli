@@ -30,10 +30,10 @@ type ExportResult struct {
 
 const maxConcurrentExports = 5
 
-func (s *ExportService) ExportInvoices(ctx context.Context, accountID int64, period domain.Period) (*ExportResult, error) {
+func (s *ExportService) ExportInvoices(ctx context.Context, accountID int64, period domain.Period) (ExportResult, error) {
 	merchants, err := s.store.ListMerchants(ctx, accountID)
 	if err != nil {
-		return nil, err
+		return ExportResult{}, err
 	}
 
 	var g errgroup.Group
@@ -65,11 +65,11 @@ func (s *ExportService) ExportInvoices(ctx context.Context, accountID int64, per
 	)
 
 	if err != nil {
-		return nil, err
+		return ExportResult{}, err
 	}
 
 	exportResult.ZipPath = zipPath
-	return &exportResult, nil
+	return exportResult, nil
 }
 
 func (s *ExportService) exportMerchantInvoice(ctx context.Context, accountID int64, period domain.Period, merchant domain.Merchant) error {

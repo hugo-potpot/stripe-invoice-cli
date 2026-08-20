@@ -9,5 +9,6 @@ import (
 func NewRootCmd(store service.Store, archiver service.Archiver) *cobra.Command {
 	root := &cobra.Command{Use: "stripeinvoice"}
 	root.AddCommand(NewImportCmd(store, archiver))
+	root.AddCommand(NewExportCmd(store, archiver))
 	return root
 }
