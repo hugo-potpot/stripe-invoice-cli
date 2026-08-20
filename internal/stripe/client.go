@@ -93,7 +93,6 @@ type InvoiceResponse struct {
 
 var ErrStatusIsntOk = errors.New("status is not ok")
 var ErrNoBearerToken = errors.New("no bearer token on response data")
-var ErrInvoiceNotFound = errors.New("no invoice found for period")
 var ErrGraphQL = errors.New("graphql error")
 
 func NewClient(ctx context.Context, cookie string) (*Client, error) {
@@ -342,5 +341,5 @@ func getInvoiceFromListDocumentsResponse(data InvoiceDocumentsResponse, period d
 	}
 
 	log.Println("Invoice not found in list")
-	return domain.Invoice{}, ErrInvoiceNotFound
+	return domain.Invoice{}, domain.ErrInvoiceNotFound
 }

@@ -17,6 +17,12 @@ type StripeClient interface {
 	DownloadPDF(ctx context.Context, accountToken, url string) ([]byte, error)
 }
 
+type Archiver interface {
+	WriteNewMerchantsCSV(ctx context.Context, period domain.Period, accountID int64, merchants []domain.Merchant) (string, error)
+	WriteInvoice(ctx context.Context, period domain.Period, accountID int64, merchant domain.Merchant, pdf []byte) error
+	ZipAccount(ctx context.Context, period domain.Period, accountID int64) (string, error)
+}
+
 type Mailer interface {
 	Send(ctx context.Context, attachments []string) error
 }

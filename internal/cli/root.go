@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewRootCmd(store service.Store) *cobra.Command {
+func NewRootCmd(store service.Store, archiver service.Archiver) *cobra.Command {
 	root := &cobra.Command{Use: "stripeinvoice"}
-	root.AddCommand(NewImportCmd(store))
+	root.AddCommand(NewImportCmd(store, archiver))
 	return root
 }

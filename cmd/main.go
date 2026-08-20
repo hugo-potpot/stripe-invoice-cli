@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"stripe-invoice-go/internal/archive"
 	"stripe-invoice-go/internal/cli"
 	"stripe-invoice-go/internal/store"
 
@@ -38,8 +39,15 @@ func main() {
 
 	queries := store.New(pool)
 
+	archiverDir := os.Getenv("ARCHIVE_DIR")
+	if archiverDir == "" {
+		archiverDir = "./archive"
+	}
+
+	archiver := archive.NewFileArchiver(archiverDir)
+
 	// Init cobra CLI
-	rootCmd := cli.NewRootCmd(queries)
+	rootCmd := cli.NewRootCmd(queries, archiver)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		slog.Error("command failed", "error", err)
 		os.Exit(1)

@@ -1,15 +1,16 @@
 package cli
 
 import (
-	"fmt"
 	"log"
+	"stripe-invoice-go/internal/domain"
 	"stripe-invoice-go/internal/service"
 	"stripe-invoice-go/internal/stripe"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
-func NewImportCmd(store service.Store) *cobra.Command {
+func NewImportCmd(store service.Store, archiver service.Archiver) *cobra.Command {
 	var accountID int64
 	var cookie string
 
@@ -22,15 +23,23 @@ func NewImportCmd(store service.Store) *cobra.Command {
 				return err
 			}
 			importService := service.NewImportService(stripeClient, store)
-			newMerchants, err := importService.ImportMerchants(cmd.Context(), accountID)
+
+			var merchants []domain.Merchant
+			merchants, err = importService.ImportMerchants(cmd.Context(), accountID)
 			if err != nil {
 				return err
 			}
 
-			// Log new merchants
-			for _, newMerchant := range newMerchants {
-				fmt.Printf("New merchant added: %s\n", newMerchant.Name)
+			now := time.Now()
+			period := domain.Period{
+				Year:  now.Year(),
+				Month: now.Month(),
 			}
+			_, err = archiver.WriteNewMerchantsCSV(cmd.Context(), period, accountID, merchants)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		},
 	}
