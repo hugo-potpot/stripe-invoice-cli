@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"stripe-invoice-go/internal/domain"
 )
 
@@ -30,12 +31,6 @@ func NewMailService(store Store, archiver Archiver, mailer Mailer) *MailService 
 }
 
 func (s *MailService) SendMonthly(ctx context.Context, period domain.Period) (MailResult, error) {
-	// 1. store.ListAccounts(ctx)
-	// 2. pour chaque compte : archiver.Attachments(ctx, period, account.ID)
-	//    - erreur → collecte dans Failed, continue (pas de zip pour ce compte ce mois-ci)
-	// 3. si aucun attachment au total → return MailResult{Failed: failed}, <erreur ou nil selon ton choix ci-dessus, pas d'appel à mailer.Send>
-	// 4. sinon → un seul mailer.Send(ctx, period, allAttachments)
-	// 5. return MailResult{Included: included, Failed: failed}, err (l'erreur du Send, s'il y en a une)
 	accounts, err := s.store.ListAccounts(ctx)
 	if err != nil {
 		return MailResult{}, fmt.Errorf("listing accounts: %w", err)
@@ -48,6 +43,7 @@ func (s *MailService) SendMonthly(ctx context.Context, period domain.Period) (Ma
 	for _, account := range accounts {
 		accountAttachment, err := s.archiver.Attachments(ctx, period, account.ID)
 		if err != nil {
+			slog.WarnContext(ctx, "no export attachments for account, skipping", "account_id", account.ID, "period", period.String(), "error", err)
 			failed = append(failed, AccountMailFailure{AccountID: account.ID, Err: err})
 			continue
 		}
@@ -56,10 +52,13 @@ func (s *MailService) SendMonthly(ctx context.Context, period domain.Period) (Ma
 	}
 
 	if len(attachments) == 0 {
+		slog.WarnContext(ctx, "no attachments found for any account, skipping mail", "period", period.String())
 		return MailResult{Failed: failed, Included: included}, ErrNoAttachment
 	}
 
+	slog.InfoContext(ctx, "sending monthly mail", "period", period.String(), "accounts_included", len(included), "accounts_failed", len(failed))
 	if err := s.mailer.Send(ctx, period, attachments); err != nil {
+		slog.ErrorContext(ctx, "sending monthly mail failed", "period", period.String(), "error", err)
 		return MailResult{Failed: failed, Included: included}, err
 	}
 

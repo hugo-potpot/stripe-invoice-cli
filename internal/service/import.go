@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"stripe-invoice-go/internal/domain"
 )
 
@@ -30,12 +30,12 @@ func (service *ImportService) ImportMerchants(ctx context.Context, accountID int
 		created, err := service.store.InsertMerchantIfNotExist(ctx, merchant)
 
 		if err != nil {
-			log.Printf("Error inserting merchant %v: %v", merchant, err)
+			slog.ErrorContext(ctx, "insert merchant failed", "merchant", merchant.Name, "token", merchant.Token, "error", err)
 			return nil, err
 		}
 
 		if created {
-			log.Printf("Merchant %s created", merchant.Name)
+			slog.InfoContext(ctx, "merchant created", "merchant", merchant.Name, "token", merchant.Token)
 			newMerchants = append(newMerchants, merchant)
 		}
 	}

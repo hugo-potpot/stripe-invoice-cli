@@ -3,6 +3,7 @@ package mailer
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"stripe-invoice-go/internal/domain"
 
 	"github.com/wneessen/go-mail"
@@ -37,7 +38,8 @@ func (m *SMTPMailer) Send(ctx context.Context, period domain.Period, attachments
 		return fmt.Errorf("setting to address: %w", err)
 	}
 
-	message.Subject(createSubject(period))
+	subject := createSubject(period)
+	message.Subject(subject)
 	message.SetBodyString(mail.TypeTextPlain, createBody(period))
 
 	for _, attachment := range attachments {
@@ -50,10 +52,12 @@ func (m *SMTPMailer) Send(ctx context.Context, period domain.Period, attachments
 		return err
 	}
 
+	slog.InfoContext(ctx, "sending mail", "to", m.to, "subject", subject, "attachments", len(attachments))
 	if err := client.DialAndSend(message); err != nil {
 		return fmt.Errorf("sending mail: %w", err)
 	}
 
+	slog.InfoContext(ctx, "mail sent", "to", m.to)
 	return nil
 }
 

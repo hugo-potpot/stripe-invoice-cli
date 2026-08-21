@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"stripe-invoice-go/internal/domain"
 	"time"
@@ -130,7 +130,7 @@ func NewClient(ctx context.Context, cookie string) (*Client, error) {
 	}
 
 	c.bearerToken = data.Profile.User.SessionApiKey
-	log.Printf("Actually logged: %+v", data.Profile.User.DisplayName)
+	slog.InfoContext(ctx, "bootstrap authenticated", "user", data.Profile.User.DisplayName)
 	return c, nil
 }
 
@@ -294,7 +294,7 @@ func (c *Client) executeRequestAndGetBody(req *http.Request) ([]byte, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Println(string(body))
+		slog.ErrorContext(req.Context(), "unexpected stripe response status", "status", resp.StatusCode, "body", string(body))
 		return nil, ErrStatusIsntOk
 	}
 
@@ -305,7 +305,7 @@ func transformMerchantRequestToMerchantDomain(response MerchantsResponse) ([]dom
 	var merchants []domain.Merchant
 	for _, merchantResponse := range response.MerchantDataResponse.V2GetUserAccessibleAccounts.StandaloneWorkspaces {
 		if len(merchantResponse.MerchantId) < 8 {
-			log.Printf("skipping merchant: %v", merchantResponse.Name)
+			slog.Warn("skipping merchant with short merchant id", "name", merchantResponse.Name, "merchant_id", merchantResponse.MerchantId)
 			continue
 		}
 
@@ -332,7 +332,7 @@ func getInvoiceFromListDocumentsResponse(data InvoiceDocumentsResponse, period d
 		}
 
 		if castToPeriod == period {
-			log.Println("Invoice Found")
+			slog.Debug("invoice found for period", "period", period.String(), "link", invoiceResponse.Link)
 			return domain.Invoice{
 				Link:   invoiceResponse.Link,
 				Period: period,
@@ -340,6 +340,6 @@ func getInvoiceFromListDocumentsResponse(data InvoiceDocumentsResponse, period d
 		}
 	}
 
-	log.Println("Invoice not found in list")
+	slog.Debug("no invoice found for period", "period", period.String())
 	return domain.Invoice{}, domain.ErrInvoiceNotFound
 }

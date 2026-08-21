@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"log"
+	"log/slog"
+	"os"
 	"stripe-invoice-go/internal/domain"
 	"stripe-invoice-go/internal/service"
 	"stripe-invoice-go/internal/stripe"
@@ -36,8 +37,14 @@ func NewExportCmd(store service.Store, archiver service.Archiver) *cobra.Command
 				return err
 			}
 
-			log.Printf("Export zip created : %s", result.ZipPath)
-			log.Println("Failed export listing: ", result.Failed)
+			slog.InfoContext(cmd.Context(), "export completed", "zip_path", result.ZipPath, "merchants_failed", len(result.Failed))
+			if len(result.Failed) > 0 {
+				failedNames := make([]string, len(result.Failed))
+				for i, failure := range result.Failed {
+					failedNames[i] = failure.Merchant.Name
+				}
+				slog.WarnContext(cmd.Context(), "some merchants failed to export", "merchants", failedNames)
+			}
 
 			return nil
 		},
@@ -50,22 +57,19 @@ func NewExportCmd(store service.Store, archiver service.Archiver) *cobra.Command
 	flags.StringVar(&periodStr, "period", "", "Period [YYYY-MM]")
 
 	// Required Flags
-	err := cmd.MarkFlagRequired("account-id")
-	if err != nil {
-		log.Fatal(err)
-		return nil
+	if err := cmd.MarkFlagRequired("account-id"); err != nil {
+		slog.Error("failed to mark flag required", "flag", "account-id", "error", err)
+		os.Exit(1)
 	}
 
-	err = cmd.MarkFlagRequired("cookie")
-	if err != nil {
-		log.Fatal(err)
-		return nil
+	if err := cmd.MarkFlagRequired("cookie"); err != nil {
+		slog.Error("failed to mark flag required", "flag", "cookie", "error", err)
+		os.Exit(1)
 	}
 
-	err = cmd.MarkFlagRequired("period")
-	if err != nil {
-		log.Fatal(err)
-		return nil
+	if err := cmd.MarkFlagRequired("period"); err != nil {
+		slog.Error("failed to mark flag required", "flag", "period", "error", err)
+		os.Exit(1)
 	}
 
 	return cmd

@@ -6,7 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,6 +38,7 @@ func (a *FileArchiver) WriteInvoice(ctx context.Context, period domain.Period, a
 		return err
 	}
 
+	slog.InfoContext(ctx, "invoice written", "merchant", merchant.Name, "path", fullPath)
 	return nil
 }
 
@@ -45,14 +46,13 @@ func (a *FileArchiver) ZipAccount(ctx context.Context, period domain.Period, acc
 	dir := a.exportDir(period, accountID)
 	zipPath := dir + ".zip"
 
-	log.Println("Creating zip archive...")
+	slog.InfoContext(ctx, "creating zip archive", "path", zipPath, "source_dir", dir)
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
 		return "", err
 	}
 	defer zipFile.Close()
 
-	log.Println("Zipping archive...")
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
@@ -79,6 +79,7 @@ func (a *FileArchiver) ZipAccount(ctx context.Context, period domain.Period, acc
 		srcFile.Close()
 	}
 
+	slog.InfoContext(ctx, "zip archive created", "path", zipPath, "files", len(invoices))
 	return zipPath, nil
 }
 
@@ -91,7 +92,7 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 		return "", err
 	}
 
-	log.Println("Creating csv archive...")
+	slog.InfoContext(ctx, "writing new merchants csv", "path", path, "count", len(merchants))
 	csvFile, err := os.Create(path)
 	if err != nil {
 		return "", err
@@ -105,12 +106,13 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 	}
 
 	for _, merchant := range merchants {
-		writer.Write([]string{
+		if err := writer.Write([]string{
 			merchant.Token,
 			merchant.Name,
 			merchant.Identify,
-		})
-		log.Printf("Adding %s to csv archive...\n", merchant.Name)
+		}); err != nil {
+			return "", err
+		}
 	}
 	writer.Flush()
 	if err := writer.Error(); err != nil {
@@ -151,10 +153,8 @@ func (a *FileArchiver) exportDir(period domain.Period, accountID int64) string {
 
 func createDirIfNotExists(dir string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0o755)
-		if err != nil {
-			log.Println(err)
-			return err
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("creating dir %q: %w", dir, err)
 		}
 	}
 	return nil

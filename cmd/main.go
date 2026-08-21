@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -63,8 +62,7 @@ func main() {
 
 func run(ctx context.Context, c chan<- *pgxpool.Pool) {
 	if err := godotenv.Load(); err != nil {
-		log.Println("no .env file loaded:", err)
-		os.Exit(1)
+		slog.Info("no .env file found, using process environment", "error", err)
 	}
 
 	var err error
@@ -76,9 +74,10 @@ func run(ctx context.Context, c chan<- *pgxpool.Pool) {
 
 	pgxPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
-		slog.Error("Failed to connect to database", "error", err)
+		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
 
+	slog.Info("database connection established")
 	c <- pgxPool
 }

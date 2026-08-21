@@ -2,7 +2,8 @@ package cli
 
 import (
 	"errors"
-	"log"
+	"log/slog"
+	"os"
 	"stripe-invoice-go/internal/domain"
 	"stripe-invoice-go/internal/service"
 
@@ -27,7 +28,7 @@ func NewSendCmd(store service.Store, archiver service.Archiver, mailer service.M
 			mailResult, err = mailService.SendMonthly(cmd.Context(), period)
 
 			if err != nil && errors.Is(err, service.ErrNoAttachment) {
-				log.Println(err)
+				slog.WarnContext(cmd.Context(), "nothing to send", "error", err)
 				return nil
 			}
 
@@ -35,8 +36,10 @@ func NewSendCmd(store service.Store, archiver service.Archiver, mailer service.M
 				return err
 			}
 
-			log.Printf("Mail included : %d", mailResult.Included)
-			log.Printf("Mail Failed : %v", mailResult.Failed)
+			slog.InfoContext(cmd.Context(), "send completed", "accounts_included", mailResult.Included, "accounts_failed", len(mailResult.Failed))
+			if len(mailResult.Failed) > 0 {
+				slog.WarnContext(cmd.Context(), "some accounts had no export to send", "failures", mailResult.Failed)
+			}
 			return nil
 		},
 	}
@@ -44,9 +47,9 @@ func NewSendCmd(store service.Store, archiver service.Archiver, mailer service.M
 	flags := cmd.Flags()
 	flags.StringVar(&periodStr, "period", "", "Period [YYYY-MM]")
 
-	err := cmd.MarkFlagRequired("period")
-	if err != nil {
-		return nil
+	if err := cmd.MarkFlagRequired("period"); err != nil {
+		slog.Error("failed to mark flag required", "flag", "period", "error", err)
+		os.Exit(1)
 	}
 
 	return cmd
