@@ -29,6 +29,19 @@ func (s *Store) GetAccount(ctx context.Context, id int64) (domain.Account, error
 	return toDomainAccount(row), nil
 }
 
+func (s *Store) ListAccounts(ctx context.Context) ([]domain.Account, error) {
+	rows, err := s.q.ListAccounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var accounts []domain.Account
+	for _, row := range rows {
+		accounts = append(accounts, toDomainAccount(row))
+	}
+	return accounts, nil
+}
+
 func (s *Store) CreateMerchant(ctx context.Context, m domain.Merchant) (domain.Merchant, error) {
 	row, err := s.q.CreateMerchant(ctx, gen.CreateMerchantParams{
 		AccountID: m.AccountID,

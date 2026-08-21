@@ -2,6 +2,10 @@
 SELECT * FROM accounts
 WHERE id = $1 LIMIT 1;
 
+-- name: ListAccounts :many
+SELECT * FROM accounts;
+
+
 -- name: CreateMerchant :one
 INSERT INTO merchants (
   account_id, token, name, identify

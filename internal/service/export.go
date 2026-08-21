@@ -28,7 +28,7 @@ type ExportResult struct {
 	Failed  []MerchantExportFailure
 }
 
-const maxConcurrentExports = 5
+const maxConcurrentExports = 10
 
 func (s *ExportService) ExportInvoices(ctx context.Context, accountID int64, period domain.Period) (ExportResult, error) {
 	merchants, err := s.store.ListMerchants(ctx, accountID)

@@ -120,6 +120,31 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 	return csvFile.Name(), nil
 }
 
+func (a *FileArchiver) Attachments(ctx context.Context, period domain.Period, accountID int64) ([]string, error) {
+	dir := a.exportDir(period, accountID)
+
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	var files []string
+
+	zipPath := dir + ".zip"
+	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
+		return nil, err
+	}
+
+	files = append(files, zipPath)
+
+	csvPath := dir + "/new_merchants.csv"
+	if _, err := os.Stat(csvPath); err == nil {
+		files = append(files, csvPath)
+	}
+
+	return files, nil
+
+}
+
 func (a *FileArchiver) exportDir(period domain.Period, accountID int64) string {
 	return filepath.Join(a.baseDir, fmt.Sprintf("%s_%d", period.String(), accountID))
 }

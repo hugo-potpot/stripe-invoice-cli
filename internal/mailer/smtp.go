@@ -1,0 +1,65 @@
+package mailer
+
+import (
+	"context"
+	"fmt"
+	"stripe-invoice-go/internal/domain"
+
+	"github.com/wneessen/go-mail"
+)
+
+type SMTPMailer struct {
+	host     string
+	port     int
+	username string
+	password string
+	from     string
+	to       string
+}
+
+func NewSMTPMailer(host string, port int, username, password, from, to string) *SMTPMailer {
+	return &SMTPMailer{
+		host:     host,
+		port:     port,
+		username: username,
+		password: password,
+		from:     from,
+		to:       to,
+	}
+}
+
+func (m *SMTPMailer) Send(ctx context.Context, period domain.Period, attachments []string) error {
+	message := mail.NewMsg()
+	if err := message.From(m.from); err != nil {
+		return fmt.Errorf("setting from address: %w", err)
+	}
+	if err := message.To(m.to); err != nil {
+		return fmt.Errorf("setting to address: %w", err)
+	}
+
+	message.Subject(createSubject(period))
+	message.SetBodyString(mail.TypeTextPlain, createBody(period))
+
+	for _, attachment := range attachments {
+		message.AttachFile(attachment)
+	}
+
+	client, err := mail.NewClient(m.host, mail.WithSMTPAuth(mail.SMTPAuthPlain),
+		mail.WithUsername(m.username), mail.WithPassword(m.password), mail.WithPort(m.port))
+	if err != nil {
+		return err
+	}
+
+	if err := client.DialAndSend(message); err != nil {
+		return fmt.Errorf("sending mail: %w", err)
+	}
+
+	return nil
+}
+
+func createSubject(period domain.Period) string {
+	return fmt.Sprintf("Stripe Invoice for %s", period.String())
+}
+func createBody(period domain.Period) string {
+	return fmt.Sprintf("Hi,\n\nPlease find attached the Stripe documents for the month of %s.\n\nCordially.", period.String())
+}

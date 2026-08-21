@@ -8,11 +8,15 @@ import (
 	"os/signal"
 	"stripe-invoice-go/internal/archive"
 	"stripe-invoice-go/internal/cli"
+	"stripe-invoice-go/internal/config"
+	"stripe-invoice-go/internal/mailer"
 	"stripe-invoice-go/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
+
+var cfg config.Config
 
 func main() {
 	// Initialize context
@@ -39,15 +43,18 @@ func main() {
 
 	queries := store.New(pool)
 
-	archiverDir := os.Getenv("ARCHIVE_DIR")
-	if archiverDir == "" {
-		archiverDir = "./archive"
-	}
-
-	archiver := archive.NewFileArchiver(archiverDir)
+	archiver := archive.NewFileArchiver(cfg.ArchiveDir)
+	smtpMailer := mailer.NewSMTPMailer(
+		cfg.SMTP.Host,
+		cfg.SMTP.Port,
+		cfg.SMTP.Username,
+		cfg.SMTP.Password,
+		cfg.SMTP.From,
+		cfg.SMTP.To,
+	)
 
 	// Init cobra CLI
-	rootCmd := cli.NewRootCmd(queries, archiver)
+	rootCmd := cli.NewRootCmd(queries, archiver, smtpMailer)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		slog.Error("command failed", "error", err)
 		os.Exit(1)
@@ -60,14 +67,14 @@ func run(ctx context.Context, c chan<- *pgxpool.Pool) {
 		os.Exit(1)
 	}
 
-	dbConnectionString := os.Getenv("DATABASE_URL")
-
-	if dbConnectionString == "" {
-		log.Println("no database connection string provided")
+	var err error
+	cfg, err = config.Load()
+	if err != nil {
+		slog.Error("load config failed", "error", err)
 		os.Exit(1)
 	}
 
-	pgxPool, err := pgxpool.New(ctx, dbConnectionString)
+	pgxPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("Failed to connect to database", "error", err)
 		os.Exit(1)
