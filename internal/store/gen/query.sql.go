@@ -19,10 +19,10 @@ RETURNING id, account_id, token, name, identify
 `
 
 type CreateMerchantParams struct {
-	AccountID int32   `json:"account_id"`
-	Token     string  `json:"token"`
-	Name      string  `json:"name"`
-	Identify  *string `json:"identify"`
+	AccountID int64  `json:"account_id"`
+	Token     string `json:"token"`
+	Name      string `json:"name"`
+	Identify  string `json:"identify"`
 }
 
 func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) (Merchant, error) {
@@ -44,13 +44,68 @@ func (q *Queries) CreateMerchant(ctx context.Context, arg CreateMerchantParams) 
 }
 
 const getAccount = `-- name: GetAccount :one
-SELECT id, name, cookie FROM accounts
+SELECT id, name FROM accounts
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetAccount(ctx context.Context, id int32) (Account, error) {
+func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 	row := q.db.QueryRow(ctx, getAccount, id)
 	var i Account
-	err := row.Scan(&i.ID, &i.Name, &i.Cookie)
+	err := row.Scan(&i.ID, &i.Name)
 	return i, err
+}
+
+const listAccounts = `-- name: ListAccounts :many
+SELECT id, name FROM accounts
+`
+
+func (q *Queries) ListAccounts(ctx context.Context) ([]Account, error) {
+	rows, err := q.db.Query(ctx, listAccounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Account
+	for rows.Next() {
+		var i Account
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMerchantsByAccount = `-- name: ListMerchantsByAccount :many
+SELECT id, account_id, token, name, identify FROM merchants
+WHERE account_id = $1
+`
+
+func (q *Queries) ListMerchantsByAccount(ctx context.Context, accountID int64) ([]Merchant, error) {
+	rows, err := q.db.Query(ctx, listMerchantsByAccount, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Merchant
+	for rows.Next() {
+		var i Merchant
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Token,
+			&i.Name,
+			&i.Identify,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

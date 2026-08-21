@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS merchants (
     account_id INTEGER REFERENCES accounts(id) NOT NULL,
     token VARCHAR(50) NOT NULL,
     name VARCHAR(120) NOT NULL,
-    identify VARCHAR(20)
+    identify VARCHAR(20) NOT NULL,
+    UNIQUE (account_id, token)
 );
 
 -- +goose Down

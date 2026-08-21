@@ -20,8 +20,8 @@ func ListMerchantUrl() *url.URL {
 	return &url.URL{
 		Scheme:     "https",
 		Host:       baseUrl,
-		Path:       "/ajax/current_user_retrieve",
-		RawQuery:   "include_only[]=id,merchants.token,merchants.nickname,object",
+		Path:       "/graphql/multiregion",
+		RawQuery:   "name=V2GetUserAccessibleAccountsQuery",
 		ForceQuery: true,
 	}
 }
