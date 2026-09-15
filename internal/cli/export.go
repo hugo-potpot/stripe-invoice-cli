@@ -3,6 +3,7 @@ package cli
 import (
 	"log/slog"
 	"os"
+	"strings"
 	"stripe-invoice-go/internal/domain"
 	"stripe-invoice-go/internal/service"
 	"stripe-invoice-go/internal/stripe"
@@ -43,7 +44,7 @@ func NewExportCmd(store service.Store, archiver service.Archiver) *cobra.Command
 				for i, failure := range result.Failed {
 					failedNames[i] = failure.Merchant.Name
 				}
-				slog.WarnContext(cmd.Context(), "some merchants failed to export", "merchants", failedNames)
+				slog.WarnContext(cmd.Context(), "some merchants failed to export", "merchants", strings.Join(failedNames, ", "))
 			}
 
 			return nil
