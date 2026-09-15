@@ -40,6 +40,8 @@ func (s *MailService) SendMonthly(ctx context.Context, period domain.Period) (Ma
 	var failed []AccountMailFailure
 	var included []int64
 
+	seen := make(map[string]bool)
+
 	for _, account := range accounts {
 		accountAttachment, err := s.archiver.Attachments(ctx, period, account.ID)
 		if err != nil {
@@ -47,7 +49,13 @@ func (s *MailService) SendMonthly(ctx context.Context, period domain.Period) (Ma
 			failed = append(failed, AccountMailFailure{AccountID: account.ID, Err: err})
 			continue
 		}
-		attachments = append(attachments, accountAttachment...)
+		for _, attachment := range accountAttachment {
+			if seen[attachment] {
+				continue
+			}
+			seen[attachment] = true
+			attachments = append(attachments, attachment)
+		}
 		included = append(included, account.ID)
 	}
 
