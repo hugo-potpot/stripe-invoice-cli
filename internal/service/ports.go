@@ -19,7 +19,7 @@ type StripeClient interface {
 }
 
 type Archiver interface {
-	WriteNewMerchantsCSV(ctx context.Context, period domain.Period, accountID int64, merchants []domain.Merchant) (string, error)
+	WriteNewMerchantsCSV(ctx context.Context, period domain.Period, merchants []domain.Merchant) (string, error)
 	WriteInvoice(ctx context.Context, period domain.Period, accountID int64, merchant domain.Merchant, pdf []byte) error
 	ZipAccount(ctx context.Context, period domain.Period, accountID int64) (string, error)
 	Attachments(ctx context.Context, period domain.Period, accountID int64) ([]string, error)

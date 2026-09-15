@@ -83,8 +83,8 @@ func (a *FileArchiver) ZipAccount(ctx context.Context, period domain.Period, acc
 	return zipPath, nil
 }
 
-func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.Period, accountID int64, merchants []domain.Merchant) (string, error) {
-	dir := a.exportDir(period, accountID)
+func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.Period, merchants []domain.Merchant) (string, error) {
+	dir := a.periodDir(period)
 	path := filepath.Join(dir, "new_merchants.csv")
 
 	err := createDirIfNotExists(dir)
@@ -92,8 +92,12 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 		return "", err
 	}
 
+	// The csv is shared by every account of the period, so each import appends to it.
+	_, statErr := os.Stat(path)
+	isNewFile := os.IsNotExist(statErr)
+
 	slog.InfoContext(ctx, "writing new merchants csv", "path", path, "count", len(merchants))
-	csvFile, err := os.Create(path)
+	csvFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
 	if err != nil {
 		return "", err
 	}
@@ -101,8 +105,10 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 
 	writer := csv.NewWriter(csvFile)
 
-	if err := writer.Write([]string{"token", "name", "identify"}); err != nil {
-		return "", err
+	if isNewFile {
+		if err := writer.Write([]string{"token", "name", "identify"}); err != nil {
+			return "", err
+		}
 	}
 
 	for _, merchant := range merchants {
@@ -123,22 +129,14 @@ func (a *FileArchiver) WriteNewMerchantsCSV(ctx context.Context, period domain.P
 }
 
 func (a *FileArchiver) Attachments(ctx context.Context, period domain.Period, accountID int64) ([]string, error) {
-	dir := a.exportDir(period, accountID)
-
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	zipPath := a.exportDir(period, accountID) + ".zip"
+	if _, err := os.Stat(zipPath); err != nil {
 		return nil, err
 	}
 
-	var files []string
+	files := []string{zipPath}
 
-	zipPath := dir + ".zip"
-	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
-		return nil, err
-	}
-
-	files = append(files, zipPath)
-
-	csvPath := dir + "/new_merchants.csv"
+	csvPath := filepath.Join(a.periodDir(period), "new_merchants.csv")
 	if _, err := os.Stat(csvPath); err == nil {
 		files = append(files, csvPath)
 	}
@@ -147,8 +145,12 @@ func (a *FileArchiver) Attachments(ctx context.Context, period domain.Period, ac
 
 }
 
+func (a *FileArchiver) periodDir(period domain.Period) string {
+	return filepath.Join(a.baseDir, period.String())
+}
+
 func (a *FileArchiver) exportDir(period domain.Period, accountID int64) string {
-	return filepath.Join(a.baseDir, fmt.Sprintf("%s_%d", period.String(), accountID))
+	return filepath.Join(a.periodDir(period), fmt.Sprintf("%s_%d", period.String(), accountID))
 }
 
 func createDirIfNotExists(dir string) error {

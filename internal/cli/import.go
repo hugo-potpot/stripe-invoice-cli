@@ -36,7 +36,7 @@ func NewImportCmd(store service.Store, archiver service.Archiver) *cobra.Command
 				Year:  now.Year(),
 				Month: now.Month(),
 			}
-			csvPath, err := archiver.WriteNewMerchantsCSV(cmd.Context(), period, accountID, merchants)
+			csvPath, err := archiver.WriteNewMerchantsCSV(cmd.Context(), period, merchants)
 			if err != nil {
 				return err
 			}
